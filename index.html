@@ -232,9 +232,32 @@
     .chart-row{grid-template-columns:1fr;}
     .importbar{grid-template-columns:repeat(2,1fr);}
   }
+  .tc-actions{display:flex; align-items:center; gap:14px;}
+  .print-btn{
+    font-family:"IBM Plex Sans"; font-size:11.5px; font-weight:600; color:var(--transfer-strong);
+    background:var(--transfer-soft); border:1px solid var(--transfer-soft-2); border-radius:999px;
+    padding:5px 12px; cursor:pointer;
+  }
+  .print-btn:hover{background:var(--transfer-soft-2);}
+  .print-only{display:none;}
+
+  @page{ size:A4 landscape; margin:10mm; }
   @media print{
     body{background:#fff;}
-    .importbar{display:none;}
+    .topbar, .group-head, .kpi-row, .chart-row, .source-card{display:none !important;}
+    .wrap{max-width:none; padding:0;}
+    .table-card{box-shadow:none; border:none; margin-top:0;}
+    .tc-head{padding:0 0 8px; border-bottom:1px solid #000;}
+    .tc-actions{display:none;}
+    .print-only{display:block; font-family:"IBM Plex Sans"; margin-bottom:2px;}
+    .print-only .pt-title{font-size:15px; font-weight:700; color:#000;}
+    .print-only .pt-sub{font-size:10.5px; color:#333; margin-top:2px;}
+    .table-scroll{overflow:visible;}
+    table{width:100%; min-width:0; font-size:8.3px;}
+    thead .grp th{padding:4px 3px; white-space:normal;}
+    thead .sub th{padding:2px 3px 5px; white-space:normal;}
+    tbody td{padding:3px 3px; white-space:normal;}
+    tbody td.proj{white-space:normal;}
   }
 </style>
 </head>
@@ -308,10 +331,17 @@
   <div class="table-card">
     <div class="tc-head">
       <h2>รายละเอียดรายโครงการ</h2>
-      <div class="legend-mini">
-        <span><i class="lt"></i>ฝั่งโอนกรรมสิทธิ์</span>
-        <span><i class="ls"></i>ฝั่งขาย</span>
+      <div class="tc-actions">
+        <div class="legend-mini">
+          <span><i class="lt"></i>ฝั่งโอนกรรมสิทธิ์</span>
+          <span><i class="ls"></i>ฝั่งขาย</span>
+        </div>
+        <button class="print-btn" onclick="window.print()">พิมพ์ตาราง / บันทึกเป็น PDF หน้าเดียว</button>
       </div>
+    </div>
+    <div class="print-only" id="print-only-header">
+      <div class="pt-title">BU1 Overall — รายละเอียดรายโครงการ</div>
+      <div class="pt-sub" id="print-only-sub"></div>
     </div>
     <div class="table-scroll">
       <table>
@@ -505,6 +535,8 @@ function render(){
 
   document.getElementById('asof-text').innerHTML =
     `Backlog / โอนแล้ว: <b>${state.transferAsOf}</b> &nbsp;·&nbsp; ยอดขายสะสม: <b>${state.s007Period}</b>`;
+  document.getElementById('print-only-sub').textContent =
+    `Backlog/โอนแล้ว ณ ${state.transferAsOf} · ยอดขายสะสม ${state.s007Period} · หน่วยมูลค่า: ล้านบาท`;
   document.getElementById('transfer-period').textContent = 'ข้อมูล ณ ' + state.transferAsOf;
   document.getElementById('sales-period').textContent = 'สะสม ' + state.s007Period;
 
