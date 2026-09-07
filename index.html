@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>BU1 Overall</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f2f5f6;
+    --surface:#ffffff;
+    --surface-2:#e9eef0;
+    --border:#dbe3e6;
+    --ink:#16232a;
+    --ink-soft:#54666e;
+    --ink-faint:#8b9aa1;
+    --transfer:#1c6e66;
+    --transfer-strong:#134f49;
+    --transfer-soft:#dcece9;
+    --transfer-soft-2:#c3ddd8;
+    --sales:#8a4a26;
+    --sales-strong:#6a3719;
+    --sales-soft:#f0e0d2;
+    --sales-soft-2:#e2c6a9;
+    --good:#2b7a4b;
+    --warn:#b5790f;
+    --critical:#b3402f;
+    --shadow:0 1px 2px rgba(20,30,34,.06), 0 4px 14px rgba(20,30,34,.05);
+    --radius:10px;
+    --radius-sm:6px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#11171a;
+      --surface:#1a2226;
+      --surface-2:#212b2f;
+      --border:#2c383d;
+      --ink:#e9eff1;
+      --ink-soft:#a9b8bd;
+      --ink-faint:#748287;
+      --transfer:#4bb8ab;
+      --transfer-strong:#7fd0c4;
+      --transfer-soft:#1e3a37;
+      --transfer-soft-2:#254642;
+      --sales:#d99a63;
+      --sales-strong:#e8b688;
+      --sales-soft:#3a2a1c;
+      --sales-soft-2:#4a3524;
+      --good:#4fb377;
+      --warn:#dba53a;
+      --critical:#e07360;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#11171a;
+    --surface:#1a2226;
+    --surface-2:#212b2f;
+    --border:#2c383d;
+    --ink:#e9eff1;
+    --ink-soft:#a9b8bd;
+    --ink-faint:#748287;
+    --transfer:#4bb8ab;
+    --transfer-strong:#7fd0c4;
+    --transfer-soft:#1e3a37;
+    --transfer-soft-2:#254642;
+    --sales:#d99a63;
+    --sales-strong:#e8b688;
+    --sales-soft:#3a2a1c;
+    --sales-soft-2:#4a3524;
+    --good:#4fb377;
+    --warn:#dba53a;
+    --critical:#e07360;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Sarabun","IBM Plex Sans",-apple-system,sans-serif;
+    font-size:14px; line-height:1.5;
+  }
+  .num, .tabular{font-family:"IBM Plex Sans","Sarabun",sans-serif; font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1360px; margin:0 auto; padding:20px 20px 48px;}
+
+  /* header */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:20px;
+    flex-wrap:wrap; margin-bottom:18px;
+  }
+  .title-block h1{
+    margin:0 0 4px; font-size:22px; font-weight:700; letter-spacing:.2px; text-wrap:balance;
+  }
+  .title-block .sub{color:var(--ink-soft); font-size:13px;}
+  .title-block .sub b{color:var(--ink);}
+  .asof{
+    display:inline-flex; gap:6px; align-items:center; margin-top:8px;
+    font-size:12px; color:var(--ink-faint);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--good); display:inline-block;}
+
+  .importbar{
+    display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:8px;
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:10px; box-shadow:var(--shadow);
+  }
+  .imp{
+    display:flex; flex-direction:column; gap:4px; padding:6px 8px;
+    border-radius:var(--radius-sm); border:1px dashed var(--border);
+    position:relative;
+  }
+  .imp.loaded{border-style:solid; border-color:var(--transfer-soft-2);}
+  .imp .imp-label{font-size:11px; font-weight:600; color:var(--ink-soft); display:flex; align-items:center; gap:5px;}
+  .imp .imp-state{width:6px;height:6px;border-radius:50%; background:var(--ink-faint); flex:none;}
+  .imp.loaded .imp-state{background:var(--good);}
+  .imp .imp-file{font-size:11px; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .imp input[type=file]{position:absolute; inset:0; opacity:0; cursor:pointer;}
+  .imp .imp-btn{
+    font-size:11px; color:var(--transfer-strong); font-weight:600;
+  }
+
+  /* kpi groups */
+  .group-head{
+    display:flex; align-items:baseline; gap:8px; margin:22px 0 10px;
+  }
+  .group-head h2{font-size:14px; font-weight:700; margin:0;}
+  .group-head .tag{
+    font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    padding:2px 8px; border-radius:999px;
+  }
+  .group-head.transfer .tag{background:var(--transfer-soft); color:var(--transfer-strong);}
+  .group-head.sales .tag{background:var(--sales-soft); color:var(--sales-strong);}
+  .group-head .period{font-size:11.5px; color:var(--ink-faint); margin-left:auto;}
+
+  .kpi-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px;}
+  .kpi{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:14px 16px; box-shadow:var(--shadow); border-top:3px solid transparent;
+  }
+  .kpi.t{border-top-color:var(--transfer);}
+  .kpi.s{border-top-color:var(--sales);}
+  .kpi .k-label{font-size:11.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;}
+  .kpi .k-value{font-size:23px; font-weight:700; font-family:"IBM Plex Sans"; font-variant-numeric:tabular-nums;}
+  .kpi .k-unit{font-size:12px; font-weight:500; color:var(--ink-faint); margin-left:3px;}
+  .kpi .k-sub{font-size:11.5px; color:var(--ink-faint); margin-top:3px; font-family:"IBM Plex Sans"; font-variant-numeric:tabular-nums;}
+  .kpi.pct .k-value{color:var(--warn);}
+  .kpi.pct.good .k-value{color:var(--good);}
+
+  /* charts */
+  .chart-row{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:24px;}
+  .chart-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 18px 10px; box-shadow:var(--shadow); min-width:0;
+  }
+  .chart-card h3{margin:0 0 2px; font-size:13.5px; font-weight:700;}
+  .chart-card .chart-note{font-size:11px; color:var(--ink-faint); margin-bottom:10px;}
+  .chart-card canvas{max-height:290px;}
+
+  /* table */
+  .table-card{
+    margin-top:24px; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden;
+  }
+  .table-card .tc-head{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap;
+  }
+  .table-card .tc-head h2{margin:0; font-size:14.5px; font-weight:700;}
+  .legend-mini{display:flex; gap:14px; font-size:11.5px; color:var(--ink-soft);}
+  .legend-mini span{display:inline-flex; align-items:center; gap:5px;}
+  .legend-mini i{width:9px;height:9px;border-radius:2px; display:inline-block;}
+  .legend-mini .lt{background:var(--transfer-soft-2);}
+  .legend-mini .ls{background:var(--sales-soft-2);}
+
+  .table-scroll{overflow-x:auto;}
+  table{border-collapse:collapse; width:100%; min-width:1380px; font-size:12.5px;}
+  thead .grp th{
+    font-family:"IBM Plex Sans"; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.03em;
+    padding:9px 10px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  thead .sub th{
+    font-family:"IBM Plex Sans"; font-weight:600; font-size:10.5px; color:var(--ink-faint);
+    padding:5px 10px 8px; text-align:right; border-bottom:2px solid var(--border); white-space:nowrap;
+  }
+  thead .sub th:first-child, thead .grp th:first-child{text-align:left;}
+  .grp-t{background:var(--transfer-soft); color:var(--transfer-strong);}
+  .grp-s{background:var(--sales-soft); color:var(--sales-strong);}
+  .grp-calc{background:var(--surface-2); color:var(--ink-soft);}
+
+  tbody td{padding:8px 10px; text-align:right; border-bottom:1px solid var(--border); font-family:"IBM Plex Sans"; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  tbody td.proj{text-align:left; font-family:"Sarabun"; font-weight:600; color:var(--ink);}
+  tbody tr:hover td{background:var(--surface-2);}
+  tbody tr.total td{
+    background:var(--surface-2); font-weight:700; border-top:2px solid var(--border); border-bottom:none;
+  }
+  .flagmark{
+    display:inline-block; margin-left:4px; font-size:10px; font-weight:700; color:var(--warn);
+    border:1px solid var(--warn); border-radius:50%; width:14px; height:14px; line-height:12px; text-align:center;
+    cursor:help;
+  }
+  .pct-cell{font-weight:700;}
+  .pct-lo{color:var(--critical);}
+  .pct-mid{color:var(--warn);}
+  .pct-hi{color:var(--good);}
+
+  /* footer / source legend */
+  .source-card{
+    margin-top:20px; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 20px;
+  }
+  .source-card h2{margin:0 0 4px; font-size:14px; font-weight:700;}
+  .source-card .hint{font-size:11.5px; color:var(--ink-faint); margin-bottom:12px;}
+  .source-list{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px 20px;}
+  .source-item{display:flex; gap:10px; align-items:flex-start; font-size:12.5px; padding:8px 0; border-top:1px solid var(--border);}
+  .source-item:nth-child(-n+2){border-top:none;}
+  .source-item .n{
+    flex:none; width:20px; height:20px; border-radius:50%; background:var(--surface-2); color:var(--ink-soft);
+    font-family:"IBM Plex Sans"; font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center;
+  }
+  .source-item .col-name{font-weight:600;}
+  .source-item .col-src{color:var(--ink-soft); display:block; margin-top:2px;}
+  .source-item .col-src b{color:var(--ink);}
+
+  .footnotes{margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font-size:11.5px; color:var(--ink-soft);}
+  .footnotes li{margin-bottom:4px;}
+
+  @media (max-width:860px){
+    .chart-row{grid-template-columns:1fr;}
+    .importbar{grid-template-columns:repeat(2,1fr);}
+  }
+  @media print{
+    body{background:#fff;}
+    .importbar{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="title-block">
+      <h1>BU1 Overall — ภาพรวมโอนกรรมสิทธิ์ &amp; ยอดขาย</h1>
+      <div class="sub">8 โครงการภายใต้ <b>Business Unit 1</b> · เชื่อมโยงข้อมูลฝ่ายโอนกรรมสิทธิ์และฝ่ายขายในหน้าเดียว</div>
+      <div class="asof"><span class="dot"></span><span id="asof-text">กำลังโหลด...</span></div>
+    </div>
+
+    <div class="importbar" id="importbar">
+      <label class="imp" id="imp-transfer-target">
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'transferTarget')">
+        <span class="imp-label"><span class="imp-state"></span>1. ไฟล์เป้าโอน</span>
+        <span class="imp-file">ยังไม่ import — ใช้ค่าอ้างอิงจาก bu1_overall</span>
+      </label>
+      <label class="imp" id="imp-sales-target">
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'salesTarget')">
+        <span class="imp-label"><span class="imp-state"></span>2. ไฟล์เป้าขาย</span>
+        <span class="imp-file">ยังไม่ import — ใช้ค่าอ้างอิงจาก bu1_overall</span>
+      </label>
+      <label class="imp loaded" id="imp-s007">
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'s007')">
+        <span class="imp-label"><span class="imp-state"></span>3. Repost S007</span>
+        <span class="imp-file">RP_S007_SaleDailyReport_20260904.xls</span>
+      </label>
+      <label class="imp loaded" id="imp-cstransfer">
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'csTransfer')">
+        <span class="imp-label"><span class="imp-state"></span>4. CS Transfer</span>
+        <span class="imp-file">CSTransferStatus_2026-09-04.xlsx</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="group-head transfer">
+    <span class="tag">ฝ่ายโอนกรรมสิทธิ์</span>
+    <h2>สถานะการโอน — Rolling Target</h2>
+    <span class="period" id="transfer-period"></span>
+  </div>
+  <div class="kpi-row" id="kpi-transfer"></div>
+
+  <div class="group-head sales">
+    <span class="tag">ฝ่ายขาย</span>
+    <h2>สถานะการขาย — Rolling Target</h2>
+    <span class="period" id="sales-period"></span>
+  </div>
+  <div class="kpi-row" id="kpi-sales"></div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <h3>Pipeline การโอนรายโครงการ</h3>
+      <div class="chart-note">โอนแล้ว+นัดโอนแล้ว vs Backlog คงเหลือ vs Forecast 60% (ยูนิต)</div>
+      <canvas id="chartTransfer"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>ผลขายเทียบเป้ารายโครงการ</h3>
+      <div class="chart-note">เป้าขาย vs ยอดจอง vs ยอดขายสุทธิ (ยูนิต)</div>
+      <canvas id="chartSales"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>%เทียบ Target ขาย (ยูนิต)</h3>
+      <div class="chart-note">ยอดขายสุทธิสะสม ÷ เป้าขาย Rolling — สะสมเพียงไม่กี่วันแรกของรอบ</div>
+      <canvas id="chartPct"></canvas>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="tc-head">
+      <h2>รายละเอียดรายโครงการ</h2>
+      <div class="legend-mini">
+        <span><i class="lt"></i>ฝั่งโอนกรรมสิทธิ์</span>
+        <span><i class="ls"></i>ฝั่งขาย</span>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr class="grp">
+            <th></th>
+            <th class="grp-t" colspan="2">เป้าโอน<br>(Working Rolling)</th>
+            <th class="grp-t" colspan="2">โอนแล้ว+<br>นัดโอนแล้ว</th>
+            <th class="grp-t" colspan="2">Backlog<br>Balance</th>
+            <th class="grp-calc" colspan="2">Forecast<br>Transfer (60%)</th>
+            <th class="grp-s" colspan="2">เป้าขาย<br>(Working Rolling)</th>
+            <th class="grp-s" colspan="2">ยอดจอง</th>
+            <th class="grp-s" colspan="2">ยอดยกเลิก</th>
+            <th class="grp-calc" colspan="2">ยอดขายสุทธิ</th>
+            <th class="grp-calc" colspan="2">%เทียบ Target ขาย</th>
+            <th class="grp-calc" colspan="2">ยอดขาย<br>To Go</th>
+          </tr>
+          <tr class="sub">
+            <th>โครงการ</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+            <th>ยูนิต%</th><th>มูลค่า%</th>
+            <th>ยูนิต</th><th>ล้านบาท</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="source-card">
+    <h2>ที่มาข้อมูลแต่ละหัวข้อ</h2>
+    <div class="hint">อธิบายว่าแต่ละคอลัมน์ในตารางด้านบนดึงข้อมูลจากไฟล์ไหน คอลัมน์ใด เพื่อให้ตรวจสอบย้อนกลับได้ในที่ประชุม</div>
+    <div class="source-list" id="source-list"></div>
+    <ol class="footnotes" id="footnotes"></ol>
+  </div>
+
+</div>
+
+<script>
+/* ---------------- canonical BU1 project list ---------------- */
+const PROJECTS = [
+  { key:'maroon',    th:'มารูน รัชดา',            aliases:['มารูน รัชดา','maroon ratchada','maroon'] },
+  { key:'wonderland',th:'เคฟ วันเดอร์แลนด์',       aliases:['เคฟ วันเดอร์แลนด์','kave wonderland'] },
+  { key:'embryo',    th:'เคฟ เอ็มบริโอ รังสิต',    aliases:['เคฟ เอ็มบริโอ รังสิต','kave embryo rangsit'], flag:'nomatch' },
+  { key:'season',    th:'แอทโมซ ซีซั่น ลาดกระบัง', aliases:['แอทโมซ ซีซั่น ลาดกระบัง','atmoz season ladkrabang'] },
+  { key:'avantgarde',th:'โมดิซ อาวองการ์ด',        aliases:['โมดิซ อาวองการ์ด','modiz avantgarde'] },
+  { key:'sukhumvit50',th:'โมดิซ สุขุมวิท 50',      aliases:['โมดิซ สุขุมวิท 50','modiz sukhumvit 50','modiz sukhumvit50'], flag:'nomatch' },
+  { key:'kanaal',    th:'แอทโมซ คาแนล รังสิต',     aliases:['แอทโมซ คาแนล รังสิต','atmoz kanaal rangsit','atmoz canal rangsit'] },
+  { key:'bangna',    th:'แอทโมซ บางนา',            aliases:['แอทโมซ บางนา','atmoz bangna'] },
+];
+function noMatchText(th){ return `ไม่พบข้อมูลยอดจอง/ยกเลิกของ "${th}" ใน S007 งวดนี้ — แสดงยอดเป็น 0 (ยังคงแสดงโครงการไว้ในตาราง)`; }
+
+function norm(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function matchProject(rawName){
+  const n = norm(rawName);
+  if(!n) return null;
+  for(const p of PROJECTS){
+    for(const a of p.aliases){
+      const na = norm(a);
+      if(n===na || n.includes(na) || na.includes(n)) return p.key;
+    }
+  }
+  return null;
+}
+
+/* ---------------- baseline reference values (from bu1_overall.xlsx) ---------------- */
+/* all values stored internally in raw baht; display layer converts everything to ล้านบาท uniformly */
+const BASELINE_TARGET = {
+  maroon:      { transferUnit:0,               transferValue:0,       salesUnit:20, salesValue:52229275.09572649 },
+  wonderland:  { transferUnit:20,               transferValue:51280000,salesUnit:40, salesValue:79041497.32620321 },
+  embryo:      { transferUnit:0.666666666666667,transferValue:590000, salesUnit:30, salesValue:61088658.930481285 },
+  season:      { transferUnit:18.666666666666668,transferValue:35410000,salesUnit:40, salesValue:71963298.56774195 },
+  avantgarde:  { transferUnit:3,                 transferValue:7950000,salesUnit:24, salesValue:66093714.28571429 },
+  sukhumvit50: { transferUnit:9,                 transferValue:55090000,salesUnit:15, salesValue:79723456.6652174 },
+  kanaal:      { transferUnit:14.666666666666668,transferValue:43350000,salesUnit:30, salesValue:48410877.828054294 },
+  bangna:      { transferUnit:11,                transferValue:23140000,salesUnit:20, salesValue:43096507.41071428 },
+};
+
+/* ---------------- live source data (embedded from the imported files) ---------------- */
+/* CS Transfer Status.xlsx > sheet "CS Weekly", as of 04/09/2026, cols AP/AQ = โอนแล้ว+นัดโอนแล้ว, AR/AS = Backlog Balance */
+const CS_TRANSFER_ASOF = '04/09/2026';
+const CS_TRANSFER_DATA = {
+  maroon:      { doneUnit:2, doneValue:5401154,      backlogUnit:3,  backlogValue:8011714 },
+  wonderland:  { doneUnit:4, doneValue:7615967,       backlogUnit:17, backlogValue:35538067.5 },
+  embryo:      { doneUnit:0, doneValue:0,             backlogUnit:6,  backlogValue:10439384 },
+  season:      { doneUnit:2, doneValue:3410296.5,     backlogUnit:8,  backlogValue:14598868.5 },
+  avantgarde:  { doneUnit:1, doneValue:1959143.5,     backlogUnit:11, backlogValue:29227996.5 },
+  sukhumvit50: { doneUnit:0, doneValue:0,             backlogUnit:2,  backlogValue:8110641 },
+  kanaal:      { doneUnit:0, doneValue:0,             backlogUnit:11, backlogValue:21082000 },
+  bangna:      { doneUnit:1, doneValue:1862750,       backlogUnit:9,  backlogValue:16076000 },
+};
+
+/* RP_S007_SaleDailyReport_20260904.xls > Page 1, period 01/09/2569–04/09/2569, cols D/E = จอง, L/M = ยกเลิก, filtered BU=BU1 */
+const S007_PERIOD = '01–04 ก.ย. 2026';
+const S007_DATA = {
+  maroon:      { bookUnit:0, bookValue:0,       cancelUnit:0, cancelValue:0 },
+  wonderland:  { bookUnit:2, bookValue:5050000, cancelUnit:1, cancelValue:2270000 },
+  embryo:      { bookUnit:0, bookValue:0,       cancelUnit:0, cancelValue:0 },
+  season:      { bookUnit:1, bookValue:2240000, cancelUnit:0, cancelValue:0 },
+  avantgarde:  { bookUnit:2, bookValue:6070000, cancelUnit:0, cancelValue:0 },
+  sukhumvit50: { bookUnit:0, bookValue:0,       cancelUnit:0, cancelValue:0 },
+  kanaal:      { bookUnit:2, bookValue:5268000, cancelUnit:0, cancelValue:0 },
+  bangna:      { bookUnit:1, bookValue:1884750, cancelUnit:1, cancelValue:1884750 },
+};
+
+/* ---------------- mutable state (overridden by import) ---------------- */
+let state = {
+  target: JSON.parse(JSON.stringify(BASELINE_TARGET)),
+  transfer: JSON.parse(JSON.stringify(CS_TRANSFER_DATA)),
+  s007: JSON.parse(JSON.stringify(S007_DATA)),
+  transferAsOf: CS_TRANSFER_ASOF,
+  s007Period: S007_PERIOD,
+  targetSource: 'bu1_overall.xlsx (ค่าอ้างอิงเดิม รอไฟล์ Import จริง)',
+};
+
+/* ---------------- formatting ---------------- */
+function fmtInt(n){ return Math.round(n).toLocaleString('en-US'); }
+function fmt2(n){ return (Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtM(n){ return fmt2(n/1e6); } // raw baht -> ล้านบาท, uniform across every value column
+function fmtPct(n){ return (Math.round(n*10)/10).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+'%'; }
+
+/* ---------------- compute derived rows ---------------- */
+function computeRows(){
+  const rows = PROJECTS.map(p=>{
+    const t = state.target[p.key]   || {transferUnit:0,transferValue:0,salesUnit:0,salesValue:0};
+    const x = state.transfer[p.key] || {doneUnit:0,doneValue:0,backlogUnit:0,backlogValue:0};
+    const s = state.s007[p.key]     || {bookUnit:0,bookValue:0,cancelUnit:0,cancelValue:0};
+
+    const forecastUnit = Math.ceil(x.backlogUnit*0.6 - 1e-9);
+    const forecastValue = x.backlogValue; // mirrors Backlog value, per original template convention
+
+    const netUnit = s.bookUnit - s.cancelUnit;
+    const netValue = s.bookValue - s.cancelValue;
+
+    const pctUnit = t.salesUnit ? (netUnit/t.salesUnit*100) : null;
+    const pctValue = t.salesValue ? (netValue/t.salesValue*100) : null;
+
+    const togoUnit = t.transferUnit - netUnit;
+    const togoValue = t.transferValue - netValue;
+
+    return {
+      key:p.key, th:p.th, flag:p.flag,
+      transferUnit:t.transferUnit, transferValue:t.transferValue,
+      doneUnit:x.doneUnit, doneValue:x.doneValue,
+      backlogUnit:x.backlogUnit, backlogValue:x.backlogValue,
+      forecastUnit, forecastValue,
+      salesUnit:t.salesUnit, salesValue:t.salesValue,
+      bookUnit:s.bookUnit, bookValue:s.bookValue,
+      cancelUnit:s.cancelUnit, cancelValue:s.cancelValue,
+      netUnit, netValue, pctUnit, pctValue,
+      togoUnit, togoValue,
+    };
+  });
+
+  const total = rows.reduce((a,r)=>({
+    transferUnit:a.transferUnit+r.transferUnit, transferValue:a.transferValue+r.transferValue,
+    doneUnit:a.doneUnit+r.doneUnit, doneValue:a.doneValue+r.doneValue,
+    backlogUnit:a.backlogUnit+r.backlogUnit, backlogValue:a.backlogValue+r.backlogValue,
+    forecastUnit:a.forecastUnit+r.forecastUnit, forecastValue:a.forecastValue+r.forecastValue,
+    salesUnit:a.salesUnit+r.salesUnit, salesValue:a.salesValue+r.salesValue,
+    bookUnit:a.bookUnit+r.bookUnit, bookValue:a.bookValue+r.bookValue,
+    cancelUnit:a.cancelUnit+r.cancelUnit, cancelValue:a.cancelValue+r.cancelValue,
+    netUnit:a.netUnit+r.netUnit, netValue:a.netValue+r.netValue,
+    togoUnit:a.togoUnit+r.togoUnit, togoValue:a.togoValue+r.togoValue,
+  }),{transferUnit:0,transferValue:0,doneUnit:0,doneValue:0,backlogUnit:0,backlogValue:0,forecastUnit:0,forecastValue:0,salesUnit:0,salesValue:0,bookUnit:0,bookValue:0,cancelUnit:0,cancelValue:0,netUnit:0,netValue:0,togoUnit:0,togoValue:0});
+  total.pctUnit = total.salesUnit ? total.netUnit/total.salesUnit*100 : null;
+  total.pctValue = total.salesValue ? total.netValue/total.salesValue*100 : null;
+
+  return {rows, total};
+}
+
+/* ---------------- rendering ---------------- */
+let charts = {};
+
+function pctClass(p){
+  if(p===null) return '';
+  if(p>=100) return 'pct-hi';
+  if(p>=50) return 'pct-mid';
+  return 'pct-lo';
+}
+
+function render(){
+  const {rows, total} = computeRows();
+
+  document.getElementById('asof-text').innerHTML =
+    `Backlog / โอนแล้ว: <b>${state.transferAsOf}</b> &nbsp;·&nbsp; ยอดขายสะสม: <b>${state.s007Period}</b>`;
+  document.getElementById('transfer-period').textContent = 'ข้อมูล ณ ' + state.transferAsOf;
+  document.getElementById('sales-period').textContent = 'สะสม ' + state.s007Period;
+
+  // KPI - transfer
+  const kt = document.getElementById('kpi-transfer');
+  kt.innerHTML = `
+    <div class="kpi t"><div class="k-label">เป้าโอน (Rolling)</div><div class="k-value">${fmt2(total.transferUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">${fmtM(total.transferValue)} ล้านบาท</div></div>
+    <div class="kpi t"><div class="k-label">โอนแล้ว+นัดโอนแล้ว</div><div class="k-value">${fmtInt(total.doneUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">${fmtM(total.doneValue)} ล้านบาท</div></div>
+    <div class="kpi t"><div class="k-label">Backlog คงเหลือ</div><div class="k-value">${fmtInt(total.backlogUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">${fmtM(total.backlogValue)} ล้านบาท</div></div>
+    <div class="kpi t"><div class="k-label">Forecast Transfer (60%)</div><div class="k-value">${fmtInt(total.forecastUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">≈ ${fmtM(total.forecastValue)} ล้านบาท (มูลค่า Backlog)</div></div>
+  `;
+
+  // KPI - sales
+  const overallPct = total.pctUnit;
+  const ks = document.getElementById('kpi-sales');
+  ks.innerHTML = `
+    <div class="kpi s"><div class="k-label">เป้าขาย (Rolling)</div><div class="k-value">${fmtInt(total.salesUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">${fmtM(total.salesValue)} ล้านบาท</div></div>
+    <div class="kpi s"><div class="k-label">ยอดจอง</div><div class="k-value">${fmtInt(total.bookUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">${fmtM(total.bookValue)} ล้านบาท</div></div>
+    <div class="kpi s"><div class="k-label">ยอดยกเลิก</div><div class="k-value">${fmtInt(total.cancelUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">${fmtM(total.cancelValue)} ล้านบาท</div></div>
+    <div class="kpi s"><div class="k-label">ยอดขายสุทธิ</div><div class="k-value">${fmtInt(total.netUnit)}<span class="k-unit">ยูนิต</span></div><div class="k-sub">${fmtM(total.netValue)} ล้านบาท</div></div>
+    <div class="kpi pct ${overallPct>=50?'good':''}"><div class="k-label">%เทียบ Target ขาย (ยูนิต)</div><div class="k-value">${overallPct===null?'—':fmtPct(overallPct)}</div><div class="k-sub">มูลค่า ${total.pctValue===null?'—':fmtPct(total.pctValue)}</div></div>
+  `;
+
+  renderTable(rows, total);
+  renderCharts(rows);
+  renderSourceLegend();
+}
+
+function renderTable(rows, total){
+  const tb = document.getElementById('table-body');
+  const flagBadge = (flag,th)=> flag ? `<span class="flagmark" title="${noMatchText(th)}">!</span>` : '';
+  tb.innerHTML = rows.map(r=>`
+    <tr>
+      <td class="proj">${r.th}${flagBadge(r.flag,r.th)}</td>
+      <td>${fmt2(r.transferUnit)}</td><td>${fmtM(r.transferValue)}</td>
+      <td>${fmtInt(r.doneUnit)}</td><td>${fmtM(r.doneValue)}</td>
+      <td>${fmtInt(r.backlogUnit)}</td><td>${fmtM(r.backlogValue)}</td>
+      <td>${fmtInt(r.forecastUnit)}</td><td>${fmtM(r.forecastValue)}</td>
+      <td>${fmtInt(r.salesUnit)}</td><td>${fmtM(r.salesValue)}</td>
+      <td>${fmtInt(r.bookUnit)}</td><td>${fmtM(r.bookValue)}</td>
+      <td>${fmtInt(r.cancelUnit)}</td><td>${fmtM(r.cancelValue)}</td>
+      <td>${fmtInt(r.netUnit)}</td><td>${fmtM(r.netValue)}</td>
+      <td class="pct-cell ${pctClass(r.pctUnit)}">${r.pctUnit===null?'—':fmtPct(r.pctUnit)}</td>
+      <td class="pct-cell ${pctClass(r.pctValue)}">${r.pctValue===null?'—':fmtPct(r.pctValue)}</td>
+      <td>${fmt2(r.togoUnit)}</td><td>${fmtM(r.togoValue)}</td>
+    </tr>
+  `).join('') + `
+    <tr class="total">
+      <td class="proj">รวม BU1</td>
+      <td>${fmt2(total.transferUnit)}</td><td>${fmtM(total.transferValue)}</td>
+      <td>${fmtInt(total.doneUnit)}</td><td>${fmtM(total.doneValue)}</td>
+      <td>${fmtInt(total.backlogUnit)}</td><td>${fmtM(total.backlogValue)}</td>
+      <td>${fmtInt(total.forecastUnit)}</td><td>${fmtM(total.forecastValue)}</td>
+      <td>${fmtInt(total.salesUnit)}</td><td>${fmtM(total.salesValue)}</td>
+      <td>${fmtInt(total.bookUnit)}</td><td>${fmtM(total.bookValue)}</td>
+      <td>${fmtInt(total.cancelUnit)}</td><td>${fmtM(total.cancelValue)}</td>
+      <td>${fmtInt(total.netUnit)}</td><td>${fmtM(total.netValue)}</td>
+      <td class="pct-cell ${pctClass(total.pctUnit)}">${total.pctUnit===null?'—':fmtPct(total.pctUnit)}</td>
+      <td class="pct-cell ${pctClass(total.pctValue)}">${total.pctValue===null?'—':fmtPct(total.pctValue)}</td>
+      <td>${fmt2(total.togoUnit)}</td><td>${fmtM(total.togoValue)}</td>
+    </tr>
+  `;
+}
+
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function renderCharts(rows){
+  const labels = rows.map(r=>r.th);
+  const ink = cssVar('--ink-soft');
+  const grid = cssVar('--border');
+  Chart.defaults.font.family = "IBM Plex Sans, Sarabun, sans-serif";
+  Chart.defaults.color = ink;
+
+  const commonScales = {
+    x:{ beginAtZero:true, grid:{color:grid}, ticks:{color:ink} },
+    y:{ grid:{display:false}, ticks:{color:ink, font:{size:11}} }
+  };
+
+  if(charts.transfer) charts.transfer.destroy();
+  charts.transfer = new Chart(document.getElementById('chartTransfer'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'โอนแล้ว+นัดโอนแล้ว', data:rows.map(r=>r.doneUnit), backgroundColor:cssVar('--transfer'), borderRadius:3 },
+      { label:'Backlog คงเหลือ', data:rows.map(r=>r.backlogUnit), backgroundColor:cssVar('--transfer-soft-2'), borderRadius:3 },
+      { label:'Forecast 60%', data:rows.map(r=>r.forecastUnit), backgroundColor:cssVar('--warn'), borderRadius:3 },
+    ]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:10.5}}} },
+      scales: commonScales }
+  });
+
+  if(charts.sales) charts.sales.destroy();
+  charts.sales = new Chart(document.getElementById('chartSales'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'เป้าขาย', data:rows.map(r=>r.salesUnit), backgroundColor:cssVar('--sales-soft-2'), borderRadius:3 },
+      { label:'ยอดจอง', data:rows.map(r=>r.bookUnit), backgroundColor:cssVar('--sales'), borderRadius:3 },
+      { label:'ยอดขายสุทธิ', data:rows.map(r=>r.netUnit), backgroundColor:cssVar('--good'), borderRadius:3 },
+    ]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:10.5}}} },
+      scales: commonScales }
+  });
+
+  if(charts.pct) charts.pct.destroy();
+  const pctVals = rows.map(r=>r.pctUnit||0);
+  charts.pct = new Chart(document.getElementById('chartPct'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'%เทียบ Target ขาย', data:pctVals,
+        backgroundColor: pctVals.map(v=> v>=50?cssVar('--good'): v>=25?cssVar('--warn'):cssVar('--critical')),
+        borderRadius:3 },
+    ]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:(c)=>c.parsed.x.toFixed(1)+'%'}} },
+      scales:{ x:{ beginAtZero:true, grid:{color:grid}, ticks:{color:ink, callback:v=>v+'%'} },
+               y:{ grid:{display:false}, ticks:{color:ink, font:{size:11}} } } }
+  });
+}
+
+function renderSourceLegend(){
+  const items = [
+    {n:1, name:'เป้าโอน — Working Rolling Transfer (ยูนิต/ล้านบาท)', src:'ไฟล์เป้าโอน', note:state.targetSource},
+    {n:2, name:'โอนแล้ว+นัดโอนแล้ว (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" คอลัมน์ AP–AQ`},
+    {n:3, name:'Backlog Balance (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" คอลัมน์ AR–AS`},
+    {n:4, name:'Forecast Transfer (60%)', src:'คำนวณ', note:'= ROUNDUP(Backlog ยูนิต × 60%, 0); มูลค่า = มูลค่า Backlog'},
+    {n:5, name:'เป้าขาย — Working Rolling Sales (ยูนิต/ล้านบาท)', src:'ไฟล์เป้าขาย', note:state.targetSource},
+    {n:6, name:'ยอดจอง (ยูนิต/ล้านบาท)', src:'ไฟล์ Repost S007', note:'สถานะ "จอง" กรอง BU = BU1'},
+    {n:7, name:'ยอดยกเลิก (ยูนิต/ล้านบาท)', src:'ไฟล์ Repost S007', note:'สถานะ "ยกเลิก" กรอง BU = BU1'},
+    {n:8, name:'ยอดขายสุทธิ (ยูนิต/ล้านบาท)', src:'คำนวณ', note:'= ยอดจอง − ยอดยกเลิก'},
+    {n:9, name:'%เทียบ Target ขาย', src:'คำนวณ', note:'= ยอดขายสุทธิ ÷ เป้าขาย (ยูนิต และมูลค่า ตามลำดับ)'},
+    {n:10, name:'ยอดขาย To Go', src:'คำนวณ', note:'= เป้าโอน (Working Rolling) − ยอดขายสุทธิ'},
+  ];
+  document.getElementById('source-list').innerHTML = items.map(it=>`
+    <div class="source-item">
+      <div class="n">${it.n}</div>
+      <div><span class="col-name">${it.name}</span><span class="col-src"><b>${it.src}</b> — ${it.note}</span></div>
+    </div>
+  `).join('');
+
+  document.getElementById('footnotes').innerHTML = `
+    <li>! เครื่องหมายในตาราง = โครงการที่ยังไม่มีข้อมูลยอดจอง/ยกเลิกใน S007 งวดนี้ (แสดงยอดเป็น 0 แต่ยังคงแสดงโครงการไว้)</li>
+    <li>ตัวเลขมูลค่าทั้งหมดในหน้านี้แสดงเป็น "ล้านบาท" หน่วยเดียวกันทุกคอลัมน์ เพื่อให้เทียบกันได้ทันทีโดยไม่ต้องแปลงหน่วยเอง</li>
+    <li>คอลัมน์ "เป้าโอน / เป้าขาย" ปัจจุบันเป็นค่าอ้างอิงจาก bu1_overall.xlsx — เมื่อได้ไฟล์เป้าโอน/เป้าขายจริงแล้วให้ import ผ่านปุ่มด้านบนเพื่อแทนที่ค่านี้ ระบบจะคำนวณคอลัมน์อื่นทั้งหมดใหม่อัตโนมัติ</li>
+    <li>S007 พบโครงการ "Kavalon" และ "Kave Carnival Rangsit" อยู่ใน BU1 ด้วย แต่ไม่อยู่ใน 8 โครงการอ้างอิงของ bu1_overall.xlsx จึงไม่รวมไว้ในแดชบอร์ดนี้ — โปรดตรวจสอบว่าเป็นโครงการใหม่ที่ต้องเพิ่มหรือไม่</li>
+  `;
+}
+
+/* ---------------- import handling ---------------- */
+function aoaFromSheet(wb, sheetNameGuess){
+  let name = wb.SheetNames.find(n=>n.toLowerCase()===String(sheetNameGuess).toLowerCase());
+  if(!name) name = wb.SheetNames.find(n=>n.toLowerCase().includes(String(sheetNameGuess).toLowerCase()));
+  if(!name) name = wb.SheetNames[0];
+  return XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:'', raw:true});
+}
+
+function findHeaderCol(aoa, regex, rowRange){
+  for(let r=0;r<Math.min(rowRange,aoa.length);r++){
+    for(let c=0;c<aoa[r].length;c++){
+      if(regex.test(String(aoa[r][c]))) return {row:r, col:c};
+    }
+  }
+  return null;
+}
+
+function parseCSTransferWorkbook(wb){
+  const aoa = aoaFromSheet(wb, 'CS Weekly');
+  const asofCell = findHeaderCol(aoa, /As of/i, 6);
+  let asOf = state.transferAsOf;
+  if(asofCell){
+    const m = String(aoa[asofCell.row][asofCell.col]).match(/\d{2}\/\d{2}\/\d{4}/);
+    if(m) asOf = m[0];
+  }
+  const done = findHeaderCol(aoa, /โอนแล้ว\+นัดโอนแล้ว/i, 12);
+  const backlog = findHeaderCol(aoa, /Backlog Balance/i, 12);
+  const projHdr = findHeaderCol(aoa, /^Project$/i, 12);
+  if(!done || !backlog || !projHdr) throw new Error('ไม่พบหัวตารางที่ต้องการในชีท CS Weekly');
+
+  const result = {};
+  for(let r=projHdr.row+1; r<aoa.length; r++){
+    const name = String(aoa[r][projHdr.col]||'').trim();
+    if(!name) continue;
+    if(/^summary|^total/i.test(name)) break;
+    const key = matchProject(name);
+    if(!key) continue;
+    result[key] = {
+      doneUnit: Number(aoa[r][done.col])||0,
+      doneValue: Number(aoa[r][done.col+1])||0,
+      backlogUnit: Number(aoa[r][backlog.col])||0,
+      backlogValue: Number(aoa[r][backlog.col+1])||0,
+    };
+  }
+  return {data:result, asOf};
+}
+
+function parseS007Workbook(wb){
+  const aoa = aoaFromSheet(wb, 'Page 1');
+  const bookHdr = findHeaderCol(aoa, /^จอง$/i, 6);
+  const cancelHdr = findHeaderCol(aoa, /^ยกเลิก$/i, 6);
+  const buHdr = findHeaderCol(aoa, /^BU$/i, 6);
+  const projHdr = findHeaderCol(aoa, /^โครงการ$/i, 6);
+  if(!bookHdr || !cancelHdr || !buHdr || !projHdr) throw new Error('ไม่พบหัวตารางที่ต้องการใน S007');
+
+  let periodLabel = state.s007Period;
+  const titleMatch = String(aoa[0]?.[0]||'').match(/(\d{2}\/\d{2}\/\d{4})\s*-\s*(\d{2}\/\d{2}\/\d{4})/);
+  if(titleMatch) periodLabel = titleMatch[1]+' – '+titleMatch[2];
+
+  const startRow = bookHdr.row + 2; // skip group header + จำนวน/มูลค่า subheader row
+  const result = {};
+  for(let r=startRow; r<aoa.length; r++){
+    const projCell = String(aoa[r][projHdr.col]||'').trim();
+    if(norm(projCell)===norm('โครงการ')) break; // second (detail) table begins
+    const buCell = String(aoa[r][buHdr.col]||'').trim();
+    if(!/^BU\d+$/i.test(buCell)) continue;
+    if(typeof aoa[r][bookHdr.col] !== 'number') continue;
+    if(buCell.toUpperCase()!=='BU1') continue;
+    const key = matchProject(projCell);
+    if(!key) continue;
+    result[key] = {
+      bookUnit: Number(aoa[r][bookHdr.col])||0,
+      bookValue: Number(aoa[r][bookHdr.col+1])||0,
+      cancelUnit: Number(aoa[r][cancelHdr.col])||0,
+      cancelValue: Number(aoa[r][cancelHdr.col+1])||0,
+    };
+  }
+  return {data:result, period:periodLabel};
+}
+
+function parseTargetWorkbook(wb, kind){
+  const aoa = aoaFromSheet(wb, 0);
+  const projHdr = findHeaderCol(aoa, /โครงการ|project/i, 8);
+  if(!projHdr) throw new Error('ไม่พบคอลัมน์ "โครงการ"');
+  let unitCol=null, valueCol=null;
+  for(const rowOffset of [0,1]){
+    const row = aoa[projHdr.row+rowOffset]||[];
+    row.forEach((cell,c)=>{
+      const s = String(cell);
+      if(unitCol===null && /unit|ยูนิต/i.test(s)) unitCol=c;
+      if(valueCol===null && /value|มูลค่า|ลบ\.|บาท/i.test(s)) valueCol=c;
+    });
+    if(unitCol!==null && valueCol!==null) break;
+  }
+  if(unitCol===null) unitCol = projHdr.col+1;
+  if(valueCol===null) valueCol = projHdr.col+2;
+
+  const result = {};
+  for(let r=projHdr.row+1; r<aoa.length; r++){
+    const name = String(aoa[r][projHdr.col]||'').trim();
+    if(!name) continue;
+    if(/^รวม|^total/i.test(name)) break;
+    const key = matchProject(name);
+    if(!key) continue;
+    const unit = Number(aoa[r][unitCol])||0;
+    const value = Number(aoa[r][valueCol])||0;
+    result[key] = kind==='transferTarget'
+      ? { transferUnit:unit, transferValue:value }
+      : { salesUnit:unit, salesValue:value };
+  }
+  return result;
+}
+
+function setImportState(id, filename, ok){
+  const el = document.getElementById(id);
+  el.classList.toggle('loaded', ok);
+  el.querySelector('.imp-file').textContent = ok ? filename : ('ผิดพลาด: ' + filename);
+}
+
+function handleImport(evt, kind){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      if(kind==='csTransfer'){
+        const {data, asOf} = parseCSTransferWorkbook(wb);
+        Object.assign(state.transfer, data);
+        state.transferAsOf = asOf;
+        setImportState('imp-cstransfer', file.name, true);
+      } else if(kind==='s007'){
+        const {data, period} = parseS007Workbook(wb);
+        Object.assign(state.s007, data);
+        state.s007Period = period;
+        setImportState('imp-s007', file.name, true);
+      } else if(kind==='transferTarget'){
+        const data = parseTargetWorkbook(wb, 'transferTarget');
+        Object.keys(data).forEach(k=>{ state.target[k] = Object.assign({}, state.target[k], data[k]); });
+        state.targetSource = 'import: ' + file.name;
+        setImportState('imp-transfer-target', file.name, true);
+      } else if(kind==='salesTarget'){
+        const data = parseTargetWorkbook(wb, 'salesTarget');
+        Object.keys(data).forEach(k=>{ state.target[k] = Object.assign({}, state.target[k], data[k]); });
+        state.targetSource = 'import: ' + file.name;
+        setImportState('imp-sales-target', file.name, true);
+      }
+      render();
+    }catch(err){
+      console.error(err);
+      const idMap = {csTransfer:'imp-cstransfer', s007:'imp-s007', transferTarget:'imp-transfer-target', salesTarget:'imp-sales-target'};
+      setImportState(idMap[kind], err.message || 'อ่านไฟล์ไม่สำเร็จ', false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+render();
+</script>
+</body>
+</html>
