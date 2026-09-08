@@ -785,7 +785,7 @@ function renderSourceLegend(){
   const items = [
     {n:1, name:'เป้าโอน — Working Rolling Transfer (ยูนิต/ล้านบาท)', src:'ไฟล์เป้าโอน', note:state.targetSource},
     {n:2, name:'โอนแล้ว+นัดโอนแล้ว (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" = โอนแล้ว(X-Y) + นัดโอนแล้ว(AN-AO) — ข้อมูล ณ ${asOfLabel}`},
-    {n:3, name:'Backlog Balance (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" คอลัมน์ AR–AS — ล่าสุด ณ ${backlogLabel}${(state.backlogAsOf && state.backlogAsOf!==state.transferAsOf)?' (คอลัมน์นี้ว่างในไฟล์ล่าสุด ยังไม่ได้รับค่าใหม่)':''}`},
+    {n:3, name:'Backlog Balance (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" = Net BackLog − โอนแล้ว+นัดโอนแล้ว, โดย Net BackLog = (BackLog+Booking)−Cancel−Non Active — คำนวณจากข้อมูลดิบเสมอ เพราะคอลัมน์ AR–AS/L–M มักไม่มีค่าคงไว้ในไฟล์ที่ export มา — ข้อมูล ณ ${backlogLabel}`},
     {n:4, name:'Forecast Transfer (60%)', src:'คำนวณ', note:'= ROUNDUP(Backlog ยูนิต × 60%, 0); มูลค่า = มูลค่า Backlog'},
     {n:5, name:'เป้าขาย — Working Rolling Sales (ยูนิต/ล้านบาท)', src:'ไฟล์เป้าขาย', note:state.targetSource},
     {n:6, name:'ยอดจอง (ยูนิต/ล้านบาท)', src:'ไฟล์ Repost S007', note:'สถานะ "จอง" กรอง BU = BU1'},
@@ -852,41 +852,44 @@ function parseCSTransferWorkbook(wb){
     const m = String(aoa[asofCell.row][asofCell.col]).match(/\d{2}\/\d{2}\/\d{4}/);
     if(m) asOf = m[0];
   }
-  // "โอนแล้ว+นัดโอนแล้ว" (AP/AQ) is a formula column that can be blank in some exports —
-  // reconstruct it from its two components instead, which are always raw data: โอนแล้ว(X/Y) + นัดโอนแล้ว(AN/AO)
+  // "โอนแล้ว+นัดโอนแล้ว" (AP/AQ), "Net BackLog" (L/M) and "Backlog Balance" (AR/AS) are formula
+  // columns that Excel computes on open but some export scripts save without the cached result —
+  // reconstruct all of them from their raw-data components instead, verified against the workbook's
+  // own formulas: AP=X+AN, L=(D+F)-H-J, AR=L-AP (same pattern for the value columns one column right).
+  const backlogRaw = findHeaderCol(aoa, /^BackLog$/i, 12);
+  const booking = findHeaderCol(aoa, /^Booking$/i, 12);
+  const cancel = findHeaderCol(aoa, /^Cancel$/i, 12);
+  const nonActive = findHeaderCol(aoa, /^Non Active$/i, 12);
   const transferred = findHeaderCol(aoa, /^โอนแล้ว$/i, 12);
   const scheduled = findHeaderCol(aoa, /^นัดโอนแล้ว$/i, 12);
-  const backlog = findHeaderCol(aoa, /Backlog Balance/i, 12);
   const projHdr = findHeaderCol(aoa, /^Project$/i, 12);
-  if(!transferred || !scheduled || !backlog || !projHdr) throw new Error('ไม่พบหัวตารางที่ต้องการในชีท CS Weekly');
+  if(!backlogRaw || !booking || !cancel || !nonActive || !transferred || !scheduled || !projHdr){
+    throw new Error('ไม่พบหัวตารางที่ต้องการในชีท CS Weekly');
+  }
+
+  const num = (r,h) => Number(aoa[r][h.col])||0;
+  const numV = (r,h) => Number(aoa[r][h.col+1])||0; // value sub-column is always one to the right
 
   const result = {};
-  let backlogHasData = false;
   for(let r=projHdr.row+1; r<aoa.length; r++){
     const name = String(aoa[r][projHdr.col]||'').trim();
     if(!name) continue;
     if(/^summary|^total/i.test(name)) break;
     const key = matchProject(name);
     if(!key) continue;
-    const backlogUnit = Number(aoa[r][backlog.col])||0;
-    const backlogValue = Number(aoa[r][backlog.col+1])||0;
-    if(backlogUnit || backlogValue) backlogHasData = true;
+
+    const doneUnit = num(r,transferred) + num(r,scheduled);
+    const doneValue = numV(r,transferred) + numV(r,scheduled);
+    const netBacklogUnit = (num(r,backlogRaw) + num(r,booking)) - num(r,cancel) - num(r,nonActive);
+    const netBacklogValue = (numV(r,backlogRaw) + numV(r,booking)) - numV(r,cancel) - numV(r,nonActive);
+
     result[key] = {
-      doneUnit: (Number(aoa[r][transferred.col])||0) + (Number(aoa[r][scheduled.col])||0),
-      doneValue: (Number(aoa[r][transferred.col+1])||0) + (Number(aoa[r][scheduled.col+1])||0),
-      backlogUnit, backlogValue,
+      doneUnit, doneValue,
+      backlogUnit: netBacklogUnit - doneUnit,
+      backlogValue: netBacklogValue - doneValue,
     };
   }
-  // Backlog Balance is blank for every row in some exports (formula not saved) — keep last known
-  // values instead of silently zeroing the whole book out.
-  if(!backlogHasData){
-    Object.keys(result).forEach(k=>{
-      const prev = state.transfer[k];
-      result[k].backlogUnit = prev ? prev.backlogUnit : 0;
-      result[k].backlogValue = prev ? prev.backlogValue : 0;
-    });
-  }
-  return {data:result, asOf, backlogHasData};
+  return {data:result, asOf};
 }
 
 function parseS007Workbook(wb){
@@ -927,18 +930,34 @@ function parseTargetWorkbook(wb, kind){
   const aoa = aoaFromSheet(wb, 0);
   const projHdr = findHeaderCol(aoa, /โครงการ|project/i, 8);
   if(!projHdr) throw new Error('ไม่พบคอลัมน์ "โครงการ"');
-  let unitCol=null, valueCol=null;
-  for(const rowOffset of [0,1]){
-    const row = aoa[projHdr.row+rowOffset]||[];
-    row.forEach((cell,c)=>{
-      const s = String(cell);
+
+  // A single sheet can carry both Transfer and Sales targets side by side (e.g. bu1_overall.xlsx),
+  // with "unit"/"value" sub-headers repeating once per metric group — so the group header itself
+  // ("Working Rolling Transfer" vs "...Sales") must be located first, otherwise the *first* unit/
+  // value pair in the row (always the Transfer group, since it sits leftmost) gets used for both.
+  const groupRegex = kind==='transferTarget'
+    ? /working rolling[\s\S]*transfer|เป้าโอน/i
+    : /working rolling[\s\S]*sales|เป้าขาย/i;
+  const groupHdr = findHeaderCol(aoa, groupRegex, 8);
+
+  let unitCol=null, valueCol=null, valueHeaderText='';
+  const searchRows = groupHdr ? [1,2] : [0,1];
+  const searchFromRow = groupHdr ? groupHdr.row : projHdr.row;
+  const searchFromCol = groupHdr ? groupHdr.col : 0;
+  for(const rowOffset of searchRows){
+    const row = aoa[searchFromRow+rowOffset]||[];
+    for(let c=searchFromCol; c<row.length; c++){
+      const s = String(row[c]);
       if(unitCol===null && /unit|ยูนิต/i.test(s)) unitCol=c;
-      if(valueCol===null && /value|มูลค่า|ลบ\.|บาท/i.test(s)) valueCol=c;
-    });
+      else if(unitCol!==null && valueCol===null && /value|มูลค่า|ลบ\.|บาท/i.test(s)){ valueCol=c; valueHeaderText=s; break; }
+    }
     if(unitCol!==null && valueCol!==null) break;
   }
   if(unitCol===null) unitCol = projHdr.col+1;
   if(valueCol===null) valueCol = projHdr.col+2;
+  // "ลบ." / "ล้านบาท" is the standard Thai abbreviation for million baht — everywhere else
+  // (บาท, Value, มูลค่า with no "ลบ.") is assumed to already be a raw baht figure.
+  const valueScale = /ลบ\.|ล้านบาท/i.test(valueHeaderText) ? 1e6 : 1;
 
   const result = {};
   for(let r=projHdr.row+1; r<aoa.length; r++){
@@ -948,7 +967,7 @@ function parseTargetWorkbook(wb, kind){
     const key = matchProject(name);
     if(!key) continue;
     const unit = Number(aoa[r][unitCol])||0;
-    const value = Number(aoa[r][valueCol])||0;
+    const value = (Number(aoa[r][valueCol])||0) * valueScale;
     result[key] = kind==='transferTarget'
       ? { transferUnit:unit, transferValue:value }
       : { salesUnit:unit, salesValue:value };
@@ -974,15 +993,15 @@ function handleImport(evt, kind){
     try{
       const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
       if(kind==='csTransfer'){
-        const {data, asOf, backlogHasData} = parseCSTransferWorkbook(wb);
+        const {data, asOf} = parseCSTransferWorkbook(wb);
         PROJECTS.forEach(p=>{
           if(data[p.key]) data[p.key].stale = false; // fresh row found this round
           else if(state.transfer[p.key]) state.transfer[p.key] = Object.assign({}, state.transfer[p.key], {stale:true}); // no row this round — keep last known, flag it
         });
         Object.assign(state.transfer, data);
         state.transferAsOf = asOf;
-        if(backlogHasData) state.backlogAsOf = asOf;
-        setImportState('csTransfer', file.name + (backlogHasData?'':' — Backlog Balance ว่างในไฟล์นี้ (คงค่าก่อนหน้าไว้)'), true);
+        state.backlogAsOf = asOf; // Backlog Balance is now always recomputed from raw components, so it's as fresh as everything else
+        setImportState('csTransfer', file.name, true);
       } else if(kind==='s007'){
         const {data, period} = parseS007Workbook(wb);
         Object.assign(state.s007, data);
