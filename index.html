@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
 <style>
   :root{
     --bg:#f2f5f6;
@@ -103,25 +103,62 @@
   }
   .dot{width:6px;height:6px;border-radius:50%;background:var(--good); display:inline-block;}
 
-  .importbar{
-    display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:8px;
+  .upload-toggle{
+    flex:none; align-self:flex-start; font-family:"IBM Plex Sans"; font-size:12.5px; font-weight:600;
+    color:var(--transfer-strong); background:var(--transfer-soft); border:1px solid var(--transfer-soft-2);
+    border-radius:999px; padding:8px 16px; cursor:pointer;
+  }
+  .upload-toggle:hover{background:var(--transfer-soft-2);}
+
+  .upload-panel{
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:10px; box-shadow:var(--shadow);
+    box-shadow:var(--shadow); padding:18px 20px; margin-bottom:20px;
   }
-  .imp{
-    display:flex; flex-direction:column; gap:4px; padding:6px 8px;
-    border-radius:var(--radius-sm); border:1px dashed var(--border);
-    position:relative;
+  .up-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px;}
+  .up-head h2{margin:0 0 4px; font-size:15px; font-weight:700;}
+  .up-hint{font-size:12px; color:var(--ink-soft); max-width:72ch;}
+  .up-close{
+    flex:none; width:26px; height:26px; border-radius:50%; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--ink-soft); cursor:pointer; font-size:12px;
   }
-  .imp.loaded{border-style:solid; border-color:var(--transfer-soft-2);}
-  .imp .imp-label{font-size:11px; font-weight:600; color:var(--ink-soft); display:flex; align-items:center; gap:5px;}
-  .imp .imp-state{width:6px;height:6px;border-radius:50%; background:var(--ink-faint); flex:none;}
-  .imp.loaded .imp-state{background:var(--good);}
-  .imp .imp-file{font-size:11px; color:var(--ink-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .imp input[type=file]{position:absolute; inset:0; opacity:0; cursor:pointer;}
-  .imp .imp-btn{
-    font-size:11px; color:var(--transfer-strong); font-weight:600;
+  .up-close:hover{color:var(--ink);}
+
+  .up-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px;}
+  .up-card{
+    border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px;
+    border-top:3px solid transparent; position:relative;
   }
+  .up-card.side-t{border-top-color:var(--transfer);}
+  .up-card.side-s{border-top-color:var(--sales);}
+  .up-num{
+    position:absolute; top:10px; right:12px; font-family:"IBM Plex Sans"; font-weight:700;
+    font-size:11px; color:var(--ink-faint);
+  }
+  .up-title{font-weight:700; font-size:13.5px; margin-bottom:3px;}
+  .up-desc{font-size:11.5px; color:var(--ink-soft); margin-bottom:12px; min-height:32px;}
+  .up-drop{
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    border:1.5px dashed var(--border); border-radius:var(--radius-sm); padding:16px 8px;
+    position:relative; cursor:pointer; background:var(--surface-2);
+  }
+  .up-drop:hover{border-color:var(--transfer-soft-2);}
+  .up-drop.dragover{border-color:var(--transfer); background:var(--transfer-soft);}
+  .up-drop-text{font-size:12px; color:var(--ink-soft);}
+  .up-drop-text b{color:var(--transfer-strong); text-decoration:underline;}
+  .up-drop input[type=file]{position:absolute; inset:0; opacity:0; cursor:pointer;}
+  .up-status{font-size:11px; color:var(--ink-faint); margin-top:8px; word-break:break-word;}
+  .up-status.ok{color:var(--good);}
+  .up-status.err{color:var(--critical);}
+
+  .up-foot{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:16px; font-size:11.5px; color:var(--ink-faint);}
+  .up-reset{font-family:"IBM Plex Sans"; font-size:11.5px; color:var(--ink-soft); background:none; border:1px solid var(--border); border-radius:999px; padding:5px 12px; cursor:pointer;}
+  .up-reset:hover{color:var(--critical); border-color:var(--critical);}
+
+  .empty-banner{
+    background:var(--transfer-soft); border:1px solid var(--transfer-soft-2); color:var(--transfer-strong);
+    border-radius:var(--radius); padding:12px 16px; font-size:13px; margin-bottom:20px;
+  }
+  .empty-banner b{text-decoration:underline;}
 
   /* kpi groups */
   .group-head{
@@ -230,7 +267,7 @@
 
   @media (max-width:860px){
     .chart-row{grid-template-columns:1fr;}
-    .importbar{grid-template-columns:repeat(2,1fr);}
+    .up-grid{grid-template-columns:repeat(2,1fr);}
   }
   .tc-actions{display:flex; align-items:center; gap:14px;}
   .print-btn{
@@ -244,7 +281,7 @@
   @page{ size:A4 landscape; margin:10mm; }
   @media print{
     body{background:#fff;}
-    .topbar, .group-head, .kpi-row, .chart-row, .source-card{display:none !important;}
+    .topbar, .upload-panel, .empty-banner, .group-head, .kpi-row, .chart-row, .source-card{display:none !important;}
     .wrap{max-width:none; padding:0;}
     .table-card{box-shadow:none; border:none; margin-top:0;}
     .tc-head{padding:0 0 8px; border-bottom:1px solid #000;}
@@ -271,29 +308,67 @@
       <div class="sub">8 โครงการภายใต้ <b>Business Unit 1</b> · เชื่อมโยงข้อมูลฝ่ายโอนกรรมสิทธิ์และฝ่ายขายในหน้าเดียว</div>
       <div class="asof"><span class="dot"></span><span id="asof-text">กำลังโหลด...</span></div>
     </div>
+    <button class="upload-toggle" id="upload-toggle" onclick="toggleUploadPanel()">อัปเดตข้อมูลประจำสัปดาห์</button>
+  </div>
 
-    <div class="importbar" id="importbar">
-      <label class="imp" id="imp-transfer-target">
-        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'transferTarget')">
-        <span class="imp-label"><span class="imp-state"></span>1. ไฟล์เป้าโอน</span>
-        <span class="imp-file">ยังไม่ import — ใช้ค่าอ้างอิงจาก bu1_overall</span>
-      </label>
-      <label class="imp" id="imp-sales-target">
-        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'salesTarget')">
-        <span class="imp-label"><span class="imp-state"></span>2. ไฟล์เป้าขาย</span>
-        <span class="imp-file">ยังไม่ import — ใช้ค่าอ้างอิงจาก bu1_overall</span>
-      </label>
-      <label class="imp loaded" id="imp-s007">
-        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'s007')">
-        <span class="imp-label"><span class="imp-state"></span>3. Repost S007</span>
-        <span class="imp-file">RP_S007_SaleDailyReport_20260904.xls</span>
-      </label>
-      <label class="imp loaded" id="imp-cstransfer">
-        <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'csTransfer')">
-        <span class="imp-label"><span class="imp-state"></span>4. CS Transfer</span>
-        <span class="imp-file">CSTransferStatus_2026-09-04.xlsx</span>
-      </label>
+  <section class="upload-panel" id="upload-panel" hidden>
+    <div class="up-head">
+      <div>
+        <h2>อัปเดตข้อมูลประจำสัปดาห์</h2>
+        <div class="up-hint">อัปโหลดเฉพาะไฟล์ที่มีของใหม่ในสัปดาห์นี้ — ที่ไม่ได้อัปโหลดจะยังใช้ค่าล่าสุดที่เคยบันทึกไว้ ระบบคำนวณแดชบอร์ดใหม่ให้อัตโนมัติและจดจำไว้ในเบราว์เซอร์นี้สำหรับครั้งถัดไป</div>
+      </div>
+      <button class="up-close" onclick="toggleUploadPanel()" aria-label="ปิด">✕</button>
     </div>
+    <div class="up-grid">
+      <div class="up-card side-t" id="up-transferTarget">
+        <div class="up-num">1</div>
+        <div class="up-title">เป้าโอน</div>
+        <div class="up-desc">Working Rolling Transfer ต่อโครงการ (ยูนิต + มูลค่า)</div>
+        <label class="up-drop" ondragenter="this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="this.classList.remove('dragover')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'transferTarget')">
+          <span class="up-drop-text">ลากไฟล์มาวาง หรือ<b>เลือกไฟล์</b></span>
+        </label>
+        <div class="up-status" id="up-status-transferTarget">ยังไม่เคยอัปโหลด</div>
+      </div>
+      <div class="up-card side-s" id="up-salesTarget">
+        <div class="up-num">2</div>
+        <div class="up-title">เป้าขาย</div>
+        <div class="up-desc">Working Rolling Sales ต่อโครงการ (ยูนิต + มูลค่า)</div>
+        <label class="up-drop" ondragenter="this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="this.classList.remove('dragover')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'salesTarget')">
+          <span class="up-drop-text">ลากไฟล์มาวาง หรือ<b>เลือกไฟล์</b></span>
+        </label>
+        <div class="up-status" id="up-status-salesTarget">ยังไม่เคยอัปโหลด</div>
+      </div>
+      <div class="up-card side-s" id="up-s007">
+        <div class="up-num">3</div>
+        <div class="up-title">ยอดขาย (S007)</div>
+        <div class="up-desc">RP_S007 Sale Daily Report — ยอดจอง/ยอดยกเลิกสะสม กรอง BU1</div>
+        <label class="up-drop" ondragenter="this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="this.classList.remove('dragover')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'s007')">
+          <span class="up-drop-text">ลากไฟล์มาวาง หรือ<b>เลือกไฟล์</b></span>
+        </label>
+        <div class="up-status" id="up-status-s007">ยังไม่เคยอัปโหลด</div>
+      </div>
+      <div class="up-card side-t" id="up-csTransfer">
+        <div class="up-num">4</div>
+        <div class="up-title">ยอดโอน (CS Transfer)</div>
+        <div class="up-desc">CS Transfer Status ชีท "CS Weekly" — โอนแล้ว+นัดโอนแล้ว, Backlog Balance</div>
+        <label class="up-drop" ondragenter="this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="this.classList.remove('dragover')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleImport(event,'csTransfer')">
+          <span class="up-drop-text">ลากไฟล์มาวาง หรือ<b>เลือกไฟล์</b></span>
+        </label>
+        <div class="up-status" id="up-status-csTransfer">ยังไม่เคยอัปโหลด</div>
+      </div>
+    </div>
+    <div class="up-foot">
+      <span id="up-savenote"></span>
+      <button class="up-reset" onclick="resetToDefaults()">ล้างข้อมูลทั้งหมดที่บันทึกไว้</button>
+    </div>
+  </section>
+
+  <div class="empty-banner" id="empty-banner" hidden>
+    ยังไม่มีข้อมูล — กดปุ่ม <b>"อัปเดตข้อมูลประจำสัปดาห์"</b> ด้านบนแล้วอัปโหลดไฟล์ทั้ง 4 เพื่อเริ่มคำนวณและแสดงแดชบอร์ด
   </div>
 
   <div class="group-head transfer">
@@ -392,14 +467,14 @@
 const PROJECTS = [
   { key:'maroon',    th:'มารูน รัชดา',            aliases:['มารูน รัชดา','maroon ratchada','maroon'] },
   { key:'wonderland',th:'เคฟ วันเดอร์แลนด์',       aliases:['เคฟ วันเดอร์แลนด์','kave wonderland'] },
-  { key:'embryo',    th:'เคฟ เอ็มบริโอ รังสิต',    aliases:['เคฟ เอ็มบริโอ รังสิต','kave embryo rangsit'], flag:'nomatch' },
+  { key:'embryo',    th:'เคฟ เอ็มบริโอ รังสิต',    aliases:['เคฟ เอ็มบริโอ รังสิต','kave embryo rangsit'] },
   { key:'season',    th:'แอทโมซ ซีซั่น ลาดกระบัง', aliases:['แอทโมซ ซีซั่น ลาดกระบัง','atmoz season ladkrabang'] },
   { key:'avantgarde',th:'โมดิซ อาวองการ์ด',        aliases:['โมดิซ อาวองการ์ด','modiz avantgarde'] },
-  { key:'sukhumvit50',th:'โมดิซ สุขุมวิท 50',      aliases:['โมดิซ สุขุมวิท 50','modiz sukhumvit 50','modiz sukhumvit50'], flag:'nomatch' },
+  { key:'sukhumvit50',th:'โมดิซ สุขุมวิท 50',      aliases:['โมดิซ สุขุมวิท 50','modiz sukhumvit 50','modiz sukhumvit50'] },
   { key:'kanaal',    th:'แอทโมซ คาแนล รังสิต',     aliases:['แอทโมซ คาแนล รังสิต','atmoz kanaal rangsit','atmoz canal rangsit'] },
   { key:'bangna',    th:'แอทโมซ บางนา',            aliases:['แอทโมซ บางนา','atmoz bangna'] },
 ];
-function noMatchText(th){ return `ไม่พบข้อมูลยอดจอง/ยกเลิกของ "${th}" ใน S007 งวดนี้ — แสดงยอดเป็น 0 (ยังคงแสดงโครงการไว้ในตาราง)`; }
+function staleTransferText(th){ return `"${th}" ไม่มีข้อมูลจากไฟล์ CS Transfer สัปดาห์นี้ (${state.transferAsOf}) — คอลัมน์โอนแล้ว+นัดโอนแล้ว/Backlog แสดงค่าล่าสุดจาก ${state.backlogAsOf} แทน`; }
 
 function norm(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
 function matchProject(rawName){
@@ -414,55 +489,74 @@ function matchProject(rawName){
   return null;
 }
 
-/* ---------------- baseline reference values (from bu1_overall.xlsx) ---------------- */
+/* ---------------- empty starting state — every number is populated by uploading the 4 files ---------------- */
 /* all values stored internally in raw baht; display layer converts everything to ล้านบาท uniformly */
-const BASELINE_TARGET = {
-  maroon:      { transferUnit:0,               transferValue:0,       salesUnit:20, salesValue:52229275.09572649 },
-  wonderland:  { transferUnit:20,               transferValue:51280000,salesUnit:40, salesValue:79041497.32620321 },
-  embryo:      { transferUnit:0.666666666666667,transferValue:590000, salesUnit:30, salesValue:61088658.930481285 },
-  season:      { transferUnit:18.666666666666668,transferValue:35410000,salesUnit:40, salesValue:71963298.56774195 },
-  avantgarde:  { transferUnit:3,                 transferValue:7950000,salesUnit:24, salesValue:66093714.28571429 },
-  sukhumvit50: { transferUnit:9,                 transferValue:55090000,salesUnit:15, salesValue:79723456.6652174 },
-  kanaal:      { transferUnit:14.666666666666668,transferValue:43350000,salesUnit:30, salesValue:48410877.828054294 },
-  bangna:      { transferUnit:11,                transferValue:23140000,salesUnit:20, salesValue:43096507.41071428 },
-};
+function emptyTargetRow(){ return { transferUnit:0, transferValue:0, salesUnit:0, salesValue:0 }; }
+function emptyTransferRow(){ return { doneUnit:0, doneValue:0, backlogUnit:0, backlogValue:0 }; }
+function emptyS007Row(){ return { bookUnit:0, bookValue:0, cancelUnit:0, cancelValue:0 }; }
 
-/* ---------------- live source data (embedded from the imported files) ---------------- */
-/* CS Transfer Status.xlsx > sheet "CS Weekly", as of 04/09/2026, cols AP/AQ = โอนแล้ว+นัดโอนแล้ว, AR/AS = Backlog Balance */
-const CS_TRANSFER_ASOF = '04/09/2026';
-const CS_TRANSFER_DATA = {
-  maroon:      { doneUnit:2, doneValue:5401154,      backlogUnit:3,  backlogValue:8011714 },
-  wonderland:  { doneUnit:4, doneValue:7615967,       backlogUnit:17, backlogValue:35538067.5 },
-  embryo:      { doneUnit:0, doneValue:0,             backlogUnit:6,  backlogValue:10439384 },
-  season:      { doneUnit:2, doneValue:3410296.5,     backlogUnit:8,  backlogValue:14598868.5 },
-  avantgarde:  { doneUnit:1, doneValue:1959143.5,     backlogUnit:11, backlogValue:29227996.5 },
-  sukhumvit50: { doneUnit:0, doneValue:0,             backlogUnit:2,  backlogValue:8110641 },
-  kanaal:      { doneUnit:0, doneValue:0,             backlogUnit:11, backlogValue:21082000 },
-  bangna:      { doneUnit:1, doneValue:1862750,       backlogUnit:9,  backlogValue:16076000 },
-};
+const BASELINE_TARGET = {};
+const CS_TRANSFER_DATA = {};
+const S007_DATA = {};
+PROJECTS.forEach(p=>{
+  BASELINE_TARGET[p.key] = emptyTargetRow();
+  CS_TRANSFER_DATA[p.key] = emptyTransferRow();
+  S007_DATA[p.key] = emptyS007Row();
+});
+const CS_TRANSFER_ASOF = '';
+const BACKLOG_ASOF = '';
+const S007_PERIOD = '';
 
-/* RP_S007_SaleDailyReport_20260904.xls > Page 1, period 01/09/2569–04/09/2569, cols D/E = จอง, L/M = ยกเลิก, filtered BU=BU1 */
-const S007_PERIOD = '01–04 ก.ย. 2026';
-const S007_DATA = {
-  maroon:      { bookUnit:0, bookValue:0,       cancelUnit:0, cancelValue:0 },
-  wonderland:  { bookUnit:2, bookValue:5050000, cancelUnit:1, cancelValue:2270000 },
-  embryo:      { bookUnit:0, bookValue:0,       cancelUnit:0, cancelValue:0 },
-  season:      { bookUnit:1, bookValue:2240000, cancelUnit:0, cancelValue:0 },
-  avantgarde:  { bookUnit:2, bookValue:6070000, cancelUnit:0, cancelValue:0 },
-  sukhumvit50: { bookUnit:0, bookValue:0,       cancelUnit:0, cancelValue:0 },
-  kanaal:      { bookUnit:2, bookValue:5268000, cancelUnit:0, cancelValue:0 },
-  bangna:      { bookUnit:1, bookValue:1884750, cancelUnit:1, cancelValue:1884750 },
-};
+/* ---------------- mutable state (overridden by import, persisted per-browser) ---------------- */
+const STORAGE_KEY = 'bu1_overall_dashboard_v1';
 
-/* ---------------- mutable state (overridden by import) ---------------- */
-let state = {
-  target: JSON.parse(JSON.stringify(BASELINE_TARGET)),
-  transfer: JSON.parse(JSON.stringify(CS_TRANSFER_DATA)),
-  s007: JSON.parse(JSON.stringify(S007_DATA)),
-  transferAsOf: CS_TRANSFER_ASOF,
-  s007Period: S007_PERIOD,
-  targetSource: 'bu1_overall.xlsx (ค่าอ้างอิงเดิม รอไฟล์ Import จริง)',
-};
+function defaultState(){
+  return {
+    target: JSON.parse(JSON.stringify(BASELINE_TARGET)),
+    transfer: JSON.parse(JSON.stringify(CS_TRANSFER_DATA)),
+    s007: JSON.parse(JSON.stringify(S007_DATA)),
+    transferAsOf: CS_TRANSFER_ASOF,
+    backlogAsOf: BACKLOG_ASOF,
+    s007Period: S007_PERIOD,
+    targetSource: 'ยังไม่ได้ import',
+    importedFiles: {
+      transferTarget: null,
+      salesTarget: null,
+      s007: null,
+      csTransfer: null,
+    },
+  };
+}
+
+let state = defaultState();
+
+function saveToStorage(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const note = document.getElementById('up-savenote');
+    if(note) note.textContent = 'บันทึกในเบราว์เซอร์นี้แล้ว ณ ' + new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){ console.warn('บันทึกลง localStorage ไม่สำเร็จ', e); }
+}
+function loadFromStorage(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    Object.assign(state, JSON.parse(raw));
+    return true;
+  }catch(e){ return false; }
+}
+function resetToDefaults(){
+  if(!confirm('ล้างข้อมูลที่บันทึกไว้ในเบราว์เซอร์นี้ และกลับไปใช้ค่าตั้งต้นในไฟล์ทั้งหมด?')) return;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  state = defaultState();
+  const note = document.getElementById('up-savenote');
+  if(note) note.textContent = 'ล้างข้อมูลที่บันทึกไว้แล้ว';
+  render();
+}
+function toggleUploadPanel(){
+  const panel = document.getElementById('upload-panel');
+  panel.hidden = !panel.hidden;
+}
 
 /* ---------------- formatting ---------------- */
 function fmtInt(n){ return Math.round(n).toLocaleString('en-US'); }
@@ -477,7 +571,7 @@ function computeRows(){
     const x = state.transfer[p.key] || {doneUnit:0,doneValue:0,backlogUnit:0,backlogValue:0};
     const s = state.s007[p.key]     || {bookUnit:0,bookValue:0,cancelUnit:0,cancelValue:0};
 
-    const forecastUnit = Math.ceil(x.backlogUnit*0.6 - 1e-9);
+    const forecastUnit = Math.ceil(x.backlogUnit*0.6 - 1e-9) + 0; // +0 normalizes -0 (empty backlog) to 0 for display
     const forecastValue = x.backlogValue; // mirrors Backlog value, per original template convention
 
     const netUnit = s.bookUnit - s.cancelUnit;
@@ -490,7 +584,7 @@ function computeRows(){
     const togoValue = t.transferValue - netValue;
 
     return {
-      key:p.key, th:p.th, flag:p.flag,
+      key:p.key, th:p.th, transferStale:!!x.stale,
       transferUnit:t.transferUnit, transferValue:t.transferValue,
       doneUnit:x.doneUnit, doneValue:x.doneValue,
       backlogUnit:x.backlogUnit, backlogValue:x.backlogValue,
@@ -533,12 +627,17 @@ function pctClass(p){
 function render(){
   const {rows, total} = computeRows();
 
+  document.getElementById('empty-banner').hidden = hasAnyData();
+
+  const transferAsOfLabel = state.transferAsOf || 'ยังไม่มีข้อมูล';
+  const s007PeriodLabel = state.s007Period || 'ยังไม่มีข้อมูล';
+  const backlogNote = (!state.backlogAsOf || state.backlogAsOf===state.transferAsOf) ? '' : ` (Backlog Balance ณ ${state.backlogAsOf})`;
   document.getElementById('asof-text').innerHTML =
-    `Backlog / โอนแล้ว: <b>${state.transferAsOf}</b> &nbsp;·&nbsp; ยอดขายสะสม: <b>${state.s007Period}</b>`;
+    `โอนแล้ว+นัดโอนแล้ว: <b>${transferAsOfLabel}</b>${backlogNote} &nbsp;·&nbsp; ยอดขายสะสม: <b>${s007PeriodLabel}</b>`;
   document.getElementById('print-only-sub').textContent =
-    `Backlog/โอนแล้ว ณ ${state.transferAsOf} · ยอดขายสะสม ${state.s007Period} · หน่วยมูลค่า: ล้านบาท`;
-  document.getElementById('transfer-period').textContent = 'ข้อมูล ณ ' + state.transferAsOf;
-  document.getElementById('sales-period').textContent = 'สะสม ' + state.s007Period;
+    `โอนแล้ว+นัดโอนแล้ว ณ ${transferAsOfLabel}${backlogNote} · ยอดขายสะสม ${s007PeriodLabel} · หน่วยมูลค่า: ล้านบาท`;
+  document.getElementById('transfer-period').textContent = 'ข้อมูล ณ ' + transferAsOfLabel + backlogNote;
+  document.getElementById('sales-period').textContent = 'สะสม ' + s007PeriodLabel;
 
   // KPI - transfer
   const kt = document.getElementById('kpi-transfer');
@@ -561,16 +660,33 @@ function render(){
   `;
 
   renderTable(rows, total);
-  renderCharts(rows);
+  try{ renderCharts(rows); }catch(err){ console.error('renderCharts failed (charts skipped, rest of page unaffected):', err); }
   renderSourceLegend();
+  renderUploadStatuses();
+}
+
+function renderUploadStatuses(){
+  ['transferTarget','salesTarget','s007','csTransfer'].forEach(kind=>{
+    const el = document.getElementById('up-status-'+kind);
+    if(!el) return;
+    const info = state.importedFiles && state.importedFiles[kind];
+    if(!info){ el.textContent = 'ยังไม่เคยอัปโหลด'; el.className = 'up-status'; return; }
+    el.textContent = (info.ok ? '' : 'เกิดข้อผิดพลาด: ') + info.name;
+    el.className = 'up-status ' + (info.ok ? 'ok' : 'err');
+  });
+}
+
+function hasAnyData(){
+  const f = state.importedFiles || {};
+  return !!(f.transferTarget || f.salesTarget || f.s007 || f.csTransfer);
 }
 
 function renderTable(rows, total){
   const tb = document.getElementById('table-body');
-  const flagBadge = (flag,th)=> flag ? `<span class="flagmark" title="${noMatchText(th)}">!</span>` : '';
+  const flagBadge = (stale,th)=> stale ? `<span class="flagmark" title="${staleTransferText(th)}">!</span>` : '';
   tb.innerHTML = rows.map(r=>`
     <tr>
-      <td class="proj">${r.th}${flagBadge(r.flag,r.th)}</td>
+      <td class="proj">${r.th}${flagBadge(r.transferStale,r.th)}</td>
       <td>${fmt2(r.transferUnit)}</td><td>${fmtM(r.transferValue)}</td>
       <td>${fmtInt(r.doneUnit)}</td><td>${fmtM(r.doneValue)}</td>
       <td>${fmtInt(r.backlogUnit)}</td><td>${fmtM(r.backlogValue)}</td>
@@ -604,6 +720,12 @@ function renderTable(rows, total){
 function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
 function renderCharts(rows){
+  if(typeof Chart === 'undefined'){
+    document.querySelectorAll('.chart-card .chart-note').forEach(el=>{
+      el.textContent = 'กราฟใช้งานไม่ได้ขณะนี้ (โหลดไลบรารีจาก cdnjs.cloudflare.com ไม่สำเร็จ) — ตาราง/ตัวเลขด้านล่างยังใช้งานได้ตามปกติ';
+    });
+    return;
+  }
   const labels = rows.map(r=>r.th);
   const ink = cssVar('--ink-soft');
   const grid = cssVar('--border');
@@ -658,10 +780,12 @@ function renderCharts(rows){
 }
 
 function renderSourceLegend(){
+  const asOfLabel = state.transferAsOf || 'ยังไม่มีข้อมูล';
+  const backlogLabel = state.backlogAsOf || 'ยังไม่มีข้อมูล';
   const items = [
     {n:1, name:'เป้าโอน — Working Rolling Transfer (ยูนิต/ล้านบาท)', src:'ไฟล์เป้าโอน', note:state.targetSource},
-    {n:2, name:'โอนแล้ว+นัดโอนแล้ว (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" คอลัมน์ AP–AQ`},
-    {n:3, name:'Backlog Balance (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" คอลัมน์ AR–AS`},
+    {n:2, name:'โอนแล้ว+นัดโอนแล้ว (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" = โอนแล้ว(X-Y) + นัดโอนแล้ว(AN-AO) — ข้อมูล ณ ${asOfLabel}`},
+    {n:3, name:'Backlog Balance (ยูนิต/ล้านบาท)', src:'ไฟล์ CS Transfer Status', note:`ชีท "CS Weekly" คอลัมน์ AR–AS — ล่าสุด ณ ${backlogLabel}${(state.backlogAsOf && state.backlogAsOf!==state.transferAsOf)?' (คอลัมน์นี้ว่างในไฟล์ล่าสุด ยังไม่ได้รับค่าใหม่)':''}`},
     {n:4, name:'Forecast Transfer (60%)', src:'คำนวณ', note:'= ROUNDUP(Backlog ยูนิต × 60%, 0); มูลค่า = มูลค่า Backlog'},
     {n:5, name:'เป้าขาย — Working Rolling Sales (ยูนิต/ล้านบาท)', src:'ไฟล์เป้าขาย', note:state.targetSource},
     {n:6, name:'ยอดจอง (ยูนิต/ล้านบาท)', src:'ไฟล์ Repost S007', note:'สถานะ "จอง" กรอง BU = BU1'},
@@ -678,19 +802,37 @@ function renderSourceLegend(){
   `).join('');
 
   document.getElementById('footnotes').innerHTML = `
-    <li>! เครื่องหมายในตาราง = โครงการที่ยังไม่มีข้อมูลยอดจอง/ยกเลิกใน S007 งวดนี้ (แสดงยอดเป็น 0 แต่ยังคงแสดงโครงการไว้)</li>
+    <li>! เครื่องหมายในตาราง = โครงการที่ไฟล์ CS Transfer สัปดาห์ล่าสุดไม่มีแถวข้อมูลเลย (แสดงค่าโอนแล้ว+นัดโอนแล้ว/Backlog ล่าสุดที่เคยอัปโหลดไว้แทน จนกว่าจะมีข้อมูลใหม่)</li>
     <li>ตัวเลขมูลค่าทั้งหมดในหน้านี้แสดงเป็น "ล้านบาท" หน่วยเดียวกันทุกคอลัมน์ เพื่อให้เทียบกันได้ทันทีโดยไม่ต้องแปลงหน่วยเอง</li>
-    <li>คอลัมน์ "เป้าโอน / เป้าขาย" ปัจจุบันเป็นค่าอ้างอิงจาก bu1_overall.xlsx — เมื่อได้ไฟล์เป้าโอน/เป้าขายจริงแล้วให้ import ผ่านปุ่มด้านบนเพื่อแทนที่ค่านี้ ระบบจะคำนวณคอลัมน์อื่นทั้งหมดใหม่อัตโนมัติ</li>
-    <li>S007 พบโครงการ "Kavalon" และ "Kave Carnival Rangsit" อยู่ใน BU1 ด้วย แต่ไม่อยู่ใน 8 โครงการอ้างอิงของ bu1_overall.xlsx จึงไม่รวมไว้ในแดชบอร์ดนี้ — โปรดตรวจสอบว่าเป็นโครงการใหม่ที่ต้องเพิ่มหรือไม่</li>
+    <li>ทุกคอลัมน์ในตารางนี้มาจากไฟล์ที่อัปโหลดผ่านฟอร์ม "อัปเดตข้อมูลประจำสัปดาห์" เท่านั้น — โครงการที่ยังไม่มีไฟล์ตรงตามชื่อจะแสดงเป็น 0 จนกว่าจะอัปโหลดไฟล์ที่มีโครงการนั้น</li>
   `;
 }
 
 /* ---------------- import handling ---------------- */
+function actualSheetRange(ws){
+  // Some exported files carry a stale/undersized "!ref" dimension that truncates
+  // sheet_to_json well before the real last row — recompute the range from the
+  // cell keys that actually exist so no data is silently dropped.
+  let maxR=-1, maxC=-1, minR=Infinity, minC=Infinity;
+  for(const key in ws){
+    if(key[0]==='!') continue;
+    const addr = XLSX.utils.decode_cell(key);
+    if(addr.r>maxR) maxR=addr.r;
+    if(addr.c>maxC) maxC=addr.c;
+    if(addr.r<minR) minR=addr.r;
+    if(addr.c<minC) minC=addr.c;
+  }
+  if(maxR<0) return undefined;
+  return { s:{r:minR,c:minC}, e:{r:maxR,c:maxC} };
+}
+
 function aoaFromSheet(wb, sheetNameGuess){
   let name = wb.SheetNames.find(n=>n.toLowerCase()===String(sheetNameGuess).toLowerCase());
   if(!name) name = wb.SheetNames.find(n=>n.toLowerCase().includes(String(sheetNameGuess).toLowerCase()));
   if(!name) name = wb.SheetNames[0];
-  return XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:'', raw:true});
+  const ws = wb.Sheets[name];
+  const range = actualSheetRange(ws);
+  return XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true, range});
 }
 
 function findHeaderCol(aoa, regex, rowRange){
@@ -710,26 +852,41 @@ function parseCSTransferWorkbook(wb){
     const m = String(aoa[asofCell.row][asofCell.col]).match(/\d{2}\/\d{2}\/\d{4}/);
     if(m) asOf = m[0];
   }
-  const done = findHeaderCol(aoa, /โอนแล้ว\+นัดโอนแล้ว/i, 12);
+  // "โอนแล้ว+นัดโอนแล้ว" (AP/AQ) is a formula column that can be blank in some exports —
+  // reconstruct it from its two components instead, which are always raw data: โอนแล้ว(X/Y) + นัดโอนแล้ว(AN/AO)
+  const transferred = findHeaderCol(aoa, /^โอนแล้ว$/i, 12);
+  const scheduled = findHeaderCol(aoa, /^นัดโอนแล้ว$/i, 12);
   const backlog = findHeaderCol(aoa, /Backlog Balance/i, 12);
   const projHdr = findHeaderCol(aoa, /^Project$/i, 12);
-  if(!done || !backlog || !projHdr) throw new Error('ไม่พบหัวตารางที่ต้องการในชีท CS Weekly');
+  if(!transferred || !scheduled || !backlog || !projHdr) throw new Error('ไม่พบหัวตารางที่ต้องการในชีท CS Weekly');
 
   const result = {};
+  let backlogHasData = false;
   for(let r=projHdr.row+1; r<aoa.length; r++){
     const name = String(aoa[r][projHdr.col]||'').trim();
     if(!name) continue;
     if(/^summary|^total/i.test(name)) break;
     const key = matchProject(name);
     if(!key) continue;
+    const backlogUnit = Number(aoa[r][backlog.col])||0;
+    const backlogValue = Number(aoa[r][backlog.col+1])||0;
+    if(backlogUnit || backlogValue) backlogHasData = true;
     result[key] = {
-      doneUnit: Number(aoa[r][done.col])||0,
-      doneValue: Number(aoa[r][done.col+1])||0,
-      backlogUnit: Number(aoa[r][backlog.col])||0,
-      backlogValue: Number(aoa[r][backlog.col+1])||0,
+      doneUnit: (Number(aoa[r][transferred.col])||0) + (Number(aoa[r][scheduled.col])||0),
+      doneValue: (Number(aoa[r][transferred.col+1])||0) + (Number(aoa[r][scheduled.col+1])||0),
+      backlogUnit, backlogValue,
     };
   }
-  return {data:result, asOf};
+  // Backlog Balance is blank for every row in some exports (formula not saved) — keep last known
+  // values instead of silently zeroing the whole book out.
+  if(!backlogHasData){
+    Object.keys(result).forEach(k=>{
+      const prev = state.transfer[k];
+      result[k].backlogUnit = prev ? prev.backlogUnit : 0;
+      result[k].backlogValue = prev ? prev.backlogValue : 0;
+    });
+  }
+  return {data:result, asOf, backlogHasData};
 }
 
 function parseS007Workbook(wb){
@@ -751,7 +908,8 @@ function parseS007Workbook(wb){
     if(norm(projCell)===norm('โครงการ')) break; // second (detail) table begins
     const buCell = String(aoa[r][buHdr.col]||'').trim();
     if(!/^BU\d+$/i.test(buCell)) continue;
-    if(typeof aoa[r][bookHdr.col] !== 'number') continue;
+    const bookRaw = aoa[r][bookHdr.col];
+    if(bookRaw==='' || bookRaw===undefined || isNaN(Number(bookRaw))) continue; // detail table below has booking-code text here, not a count
     if(buCell.toUpperCase()!=='BU1') continue;
     const key = matchProject(projCell);
     if(!key) continue;
@@ -798,50 +956,67 @@ function parseTargetWorkbook(wb, kind){
   return result;
 }
 
-function setImportState(id, filename, ok){
-  const el = document.getElementById(id);
-  el.classList.toggle('loaded', ok);
-  el.querySelector('.imp-file').textContent = ok ? filename : ('ผิดพลาด: ' + filename);
+function setImportState(kind, filename, ok){
+  state.importedFiles[kind] = { name: filename, ok };
 }
 
 function handleImport(evt, kind){
   const file = evt.target.files[0];
   if(!file) return;
+  if(typeof XLSX === 'undefined'){
+    setImportState(kind, 'โหลดตัวอ่านไฟล์ Excel ไม่สำเร็จ (อาจถูกเครือข่าย/ไฟร์วอลล์บล็อก cdnjs.cloudflare.com) — ลองรีเฟรชหน้านี้ขณะต่ออินเทอร์เน็ต หรือแจ้ง IT ให้ปลดบล็อก', false);
+    render();
+    evt.target.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e){
     try{
       const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
       if(kind==='csTransfer'){
-        const {data, asOf} = parseCSTransferWorkbook(wb);
+        const {data, asOf, backlogHasData} = parseCSTransferWorkbook(wb);
+        PROJECTS.forEach(p=>{
+          if(data[p.key]) data[p.key].stale = false; // fresh row found this round
+          else if(state.transfer[p.key]) state.transfer[p.key] = Object.assign({}, state.transfer[p.key], {stale:true}); // no row this round — keep last known, flag it
+        });
         Object.assign(state.transfer, data);
         state.transferAsOf = asOf;
-        setImportState('imp-cstransfer', file.name, true);
+        if(backlogHasData) state.backlogAsOf = asOf;
+        setImportState('csTransfer', file.name + (backlogHasData?'':' — Backlog Balance ว่างในไฟล์นี้ (คงค่าก่อนหน้าไว้)'), true);
       } else if(kind==='s007'){
         const {data, period} = parseS007Workbook(wb);
         Object.assign(state.s007, data);
         state.s007Period = period;
-        setImportState('imp-s007', file.name, true);
+        setImportState('s007', file.name, true);
       } else if(kind==='transferTarget'){
         const data = parseTargetWorkbook(wb, 'transferTarget');
         Object.keys(data).forEach(k=>{ state.target[k] = Object.assign({}, state.target[k], data[k]); });
         state.targetSource = 'import: ' + file.name;
-        setImportState('imp-transfer-target', file.name, true);
+        setImportState('transferTarget', file.name, true);
       } else if(kind==='salesTarget'){
         const data = parseTargetWorkbook(wb, 'salesTarget');
         Object.keys(data).forEach(k=>{ state.target[k] = Object.assign({}, state.target[k], data[k]); });
         state.targetSource = 'import: ' + file.name;
-        setImportState('imp-sales-target', file.name, true);
+        setImportState('salesTarget', file.name, true);
       }
+      saveToStorage();
       render();
     }catch(err){
       console.error(err);
-      const idMap = {csTransfer:'imp-cstransfer', s007:'imp-s007', transferTarget:'imp-transfer-target', salesTarget:'imp-sales-target'};
-      setImportState(idMap[kind], err.message || 'อ่านไฟล์ไม่สำเร็จ', false);
+      setImportState(kind, err.message || 'อ่านไฟล์ไม่สำเร็จ — ตรวจสอบว่าเลือกไฟล์/ชีทถูกต้องหรือไม่', false);
+      render();
     }
   };
+  reader.onerror = function(){
+    setImportState(kind, 'อ่านไฟล์ไม่สำเร็จ', false);
+    render();
+  };
   reader.readAsArrayBuffer(file);
+  evt.target.value = ''; // allow re-selecting the same filename later
 }
 
+loadFromStorage();
+if(!hasAnyData()) document.getElementById('upload-panel').hidden = false; // open the form by default until something has been uploaded
 render();
 </script>
 </body>
